@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Necessary font -->
+    <link rel="preconnect" href="https://fonts.gstatic.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Courier+Prime&display=swap"
+      rel="stylesheet"
+    />
+
+    <title>Main</title>
+  </head>
+  <body
+    id="body"
+    style="font-family: 'Courier Prime', monospace; font-size: 5px"
+  >
+    <img src="../img/robin_r.jpg" id="doge" crossorigin="anonymous" />
+    <button onclick="pressBtn()">Click</button>
+    <button onclick="pressCanvas()">Click 2</button>
+    <button onclick="fromCtoChar()">Click 3</button>
+    <script src="resize.js"></script>
+    <script>
+      // C functions imported
+      var js_wrapped_fib = Module.cwrap("fib", "number", ["number"]);
+      var js_wrapped_pxl = Module.cwrap("pxl", null, [
+        "number",
+        "number",
+        "number",
+      ]);
+      var js_wrapped_char = Module.cwrap("toChar", null, [
+        "number",
+        "number",
+        "number",
+      ]);
+
+      // Get image data from html image
+      const ratio = 1;
+      function getImgData(img) {
+        // Create canvas
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        // Set width and height
+        const width = img.width * ratio;
+        const height = img.height * ratio;
+        canvas.width = width;
+        canvas.height = height;
+        // Draw the image
+        ctx.drawImage(img, 0, 0);
+        // Take image data
+        var imgData = ctx.getImageData(0, 0, width, height);
+
+        return imgData;
+      }
+
+      // Functions to render
+      const parap = document.createElement("div");
+      document.getElementById("body").append(parap);
+      parap.style = "transform: scaleY(0.66);";
+      var general_str = "";
+      function printFromC(character) {
+        character = String.fromCharCode(character);
+        general_str += character;
+      }
+      function appendString(astr) {
+        parap.innerText = astr;
+      }
+
+      // Runs on third button
+      // Use C to render pixel data to characters
+      function fromCtoChar() {
+        var img = document.getElementById("doge");
+        const dataUrl = getImgData(img);
+
+        const width = img.width * ratio;
+        const height = img.height * ratio;
+        console.log(width, height);
+
+        var input_array = Int32Array.from(dataUrl.data);
+        const len = input_array.length;
+        const bytes_per_element = input_array.BYTES_PER_ELEMENT;
+
+        console.log("--------------------------------------");
+        var imgData_in = Module._malloc(len * bytes_per_element);
+        var imgData_out = Module._malloc(len / 4);
+        Module.HEAP32.set(input_array, imgData_in / 4);
+        js_wrapped_char(imgData_in, imgData_out, width, height);
+        var output_array = new Int32Array(
+          Module.HEAP32.buffer,
+          imgData_out,
+          len / 4
+        );
+        Module._free(imgData_in);
+        Module._free(imgData_out);
+        console.log("--------------------------------------");
+
+        console.log("Startin array: ", input_array);
+        console.log("Resulting array: ", output_array);
+        output_array.forEach((item) => printFromC(item));
+        appendString(general_str);
+      }
+
+      // First Button
+      function pressBtn() {
+        console.log("Fibonacci work: ", js_wrapped_fib(33));
+      }
+
+      // Second Button
+      function pressCanvas() {
+        var img = document.getElementById("doge");
+        const dataUrl = getImgData(img);
+
+        const canvas2 = document.createElement("canvas");
+        const ctx2 = canvas2.getContext("2d");
+        canvas2.width = img.width;
+        canvas2.height = img.height;
+
+        const width = img.width * ratio;
+        const height = img.height * ratio;
+
+        var input_array = Int32Array.from(dataUrl.data);
+        const len = input_array.length;
+        const bytes_per_element = input_array.BYTES_PER_ELEMENT;
+
+        // JS run
+        // var t0 = performance.now();
+        // console.log("--------------------------------------");
+        // var output_array = [];
+        // for (let k = 0; k < len; k += 4) {
+        //   res = parseInt(
+        //     (input_array[k] + input_array[k + 1] + input_array[k + 2]) / 3
+        //   );
+        //   output_array.push(res);
+        //   output_array.push(res);
+        //   output_array.push(res);
+        //   output_array.push(255);
+        // }
+        // console.log("--------------------------------------");
+        // var t1 = performance.now();
+        // console.log("Native JS performance [s]:", (t1 - t0) / 1000);
+
+        // C run
+        var t3 = performance.now();
+        console.log("--------------------------------------");
+        var imgData_in = Module._malloc(len * bytes_per_element);
+        var imgData_out = Module._malloc(len * bytes_per_element);
+        Module.HEAP32.set(input_array, imgData_in / 4);
+        js_wrapped_pxl(imgData_in, imgData_out, width, height);
+        var output_array = new Int32Array(
+          Module.HEAP32.buffer,
+          imgData_out,
+          len
+        );
+        // console.log(
+        //   "Memory(8) Input",
+        //   Module.HEAP8.slice(imgData_in, imgData_in + 4 * 16)
+        // );
+        // console.log(
+        //   "Memory(8) Output",
+        //   Module.HEAP8.slice(imgData_out, imgData_out + 4 * 16)
+        // );
+        Module._free(imgData_in);
+        Module._free(imgData_out);
+        console.log("--------------------------------------");
+        var t4 = performance.now();
+        console.log("Web Assembly performance [s]", (t4 - t3) / 1000);
+
+        // Show
+        console.log("Startin array: ", input_array);
+        console.log("Resulting array: ", output_array);
+        const clamped_array = Uint8ClampedArray.from(output_array);
+        console.log("Clamped array: ", clamped_array);
+        ctx2.putImageData(new ImageData(clamped_array, width, height), 0, 0);
+        document.getElementById("body").append(canvas2);
+      }
+    </script>
+  </body>
+</html>
