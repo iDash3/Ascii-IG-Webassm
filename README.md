@@ -1,4 +1,4 @@
-## Image to ascii with web assembly
+# Image to ascii with web assembly
 
 Dir structure is a mess
 
@@ -10,13 +10,13 @@ Dir structure is a mess
 
 res.txt is just the result
 
-# compiled with emcc
+## compiled with emcc
 
 '''
 emcc web-implementation/resize.c -o web-implementation/resize.html -s WASM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=["cwrap"]
 '''
 
-# Should run a sever (JS does not work well with unstrusted async)
+## Should run a sever (JS does not work well with unstrusted async)
 
 '''
 python -m http.server
