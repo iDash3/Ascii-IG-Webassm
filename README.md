@@ -12,14 +12,14 @@ res.txt is just the result
 
 ## compiled with emcc
 
-'''
+```
 emcc web-implementation/resize.c -o web-implementation/resize.html -s WASM=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=["cwrap"]
-'''
+```
 
 ## Should run a sever (JS does not work well with unstrusted async)
 
-'''
+```
 python -m http.server
-'''
+```
 
 This will eventually be a chrome extension, when i find the time
